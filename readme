@@ -6,10 +6,10 @@
 <title>Test Attività Sportive — Compilazione</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
-<!-- EmailJS: invia una copia dei risultati a online@studiorm.eu -->
+<!-- EmailJS: invia una copia dei risultati alla persona e a online@studiorm.eu -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
-  emailjs.init("gDTYPqnl_nEHZdnOF"); // sostituisci con la tua Public Key EmailJS
+  emailjs.init("YOUR_PUBLIC_KEY"); // sostituisci con la tua Public Key EmailJS
 </script>
 <style>
   :root{
@@ -69,7 +69,7 @@
   .field{display:flex;flex-direction:column;gap:6px;}
   .field.full{grid-column:1 / -1;}
   label{font-size:13px;font-weight:600;color:var(--ink-soft);}
-  input[type=text],input[type=date]{
+  input[type=text],input[type=date],input[type=email]{
     font-family:'Inter',sans-serif;
     font-size:15px;
     padding:10px 12px;
@@ -176,7 +176,7 @@
 <div class="progress-bar" id="progressBar"></div>
 
 <header class="top" style="position:relative;">
-  <div class="eyebrow">Questionario: 50 domande</div>
+  <div class="eyebrow">Questionario · 50 item</div>
   <h1>Test Attività Sportive</h1>
   <p class="sub">Rispondi con la prima reazione che ti viene in mente. Non ci sono risposte giuste o sbagliate: il questionario esplora le tue preferenze rispetto allo sport.</p>
   <svg class="pentagon" viewBox="0 0 64 64" fill="none">
@@ -194,6 +194,7 @@
       <div class="field-grid">
         <div class="field"><label for="nome">Nome</label><input type="text" id="nome" required></div>
         <div class="field"><label for="cognome">Cognome</label><input type="text" id="cognome" required></div>
+        <div class="field"><label for="email">Email</label><input type="email" id="email" required></div>
         <div class="field"><label for="dataNascita">Data di nascita</label><input type="date" id="dataNascita" required></div>
         <div class="field"><label for="azienda">Azienda</label><input type="text" id="azienda"></div>
         <div class="field full"><label for="residenza">Residenza</label><input type="text" id="residenza"></div>
@@ -210,7 +211,7 @@
   <div id="doneScreen" class="done-screen card" style="display:none;">
     <div class="mark">✓</div>
     <h2>File generato</h2>
-    <p>Il file con le tue risposte è stato scaricato. Invialo alla persona che deve elaborare i risultati (email, gestionale, PEC…). Nessun punteggio viene calcolato o mostrato qui.</p>
+    <p>Il file con le tue risposte è stato scaricato e inviato via email. Nessun punteggio viene calcolato o mostrato qui.</p>
     <div class="filename" id="filenameShown"></div>
   </div>
 
@@ -315,6 +316,7 @@ function refreshStatus(){
   progressBar.style.width = (answered / QUESTIONS.length * 100) + '%';
   const personalOk = document.getElementById('nome').value.trim() &&
                       document.getElementById('cognome').value.trim() &&
+                      document.getElementById('email').value.trim() &&
                       document.getElementById('dataNascita').value;
   submitBtn.disabled = !(answered === QUESTIONS.length && personalOk);
 }
@@ -330,9 +332,13 @@ function computeChecksum(risposte){
   return (sum % 100000);
 }
 
-// Invia una copia dei risultati via email a online@studiorm.eu (tramite EmailJS)
-function inviaEmailAlloStudio(payload) {
-  const templateParams = {
+// Invia una copia dei risultati via email allo studio e alla persona che ha compilato il test
+// Il file JSON viene incluso come allegato reale (Variable Attachment su EmailJS, codificato in Base64)
+function inviaEmail(payload, filename, emailPersona) {
+  const jsonString = JSON.stringify(payload, null, 2);
+  const base64File = btoa(unescape(encodeURIComponent(jsonString)));
+
+  const templateParamsBase = {
     nome: payload.datiPersonali.nome,
     cognome: payload.datiPersonali.cognome,
     dataNascita: payload.datiPersonali.dataNascita,
@@ -342,15 +348,23 @@ function inviaEmailAlloStudio(payload) {
     risposte_testo: payload.risposte
       .map(r => `Domanda ${r.numero} [${r.dimensione}]: ${r.risposta}`)
       .join('\n'),
-    to_email: "online@studiorm.eu"
+    nome_file: filename,
+    risposte_file: base64File
   };
 
-  const SERVICE_ID = "service_18uu5td";   // sostituisci con il tuo Service ID reale
-  const TEMPLATE_ID = "template_pmxho6q"; // sostituisci con il tuo Template ID reale
+  const SERVICE_ID = "service_xxxxxxx";   // sostituisci con il tuo Service ID reale
+  const TEMPLATE_ID = "template_xxxxxxx"; // sostituisci con il tuo Template ID reale
 
-  emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams)
+  // Copia allo studio
+  emailjs.send(SERVICE_ID, TEMPLATE_ID, { ...templateParamsBase, to_email: "online@studiorm.eu" })
     .catch(function (err) {
-      console.error('Invio email allo studio non riuscito:', err);
+      console.error('Invio allo studio non riuscito:', err);
+    });
+
+  // Copia alla persona che ha compilato il test
+  emailjs.send(SERVICE_ID, TEMPLATE_ID, { ...templateParamsBase, to_email: emailPersona })
+    .catch(function (err) {
+      console.error('Invio alla persona non riuscito:', err);
     });
 }
 
@@ -365,6 +379,7 @@ submitBtn.addEventListener('click', () => {
   const datiPersonali = {
     nome: document.getElementById('nome').value.trim(),
     cognome: document.getElementById('cognome').value.trim(),
+    email: document.getElementById('email').value.trim(),
     dataNascita: document.getElementById('dataNascita').value,
     azienda: document.getElementById('azienda').value.trim(),
     residenza: document.getElementById('residenza').value.trim()
@@ -379,15 +394,16 @@ submitBtn.addEventListener('click', () => {
     checksum: computeChecksum(risposte)
   };
 
-  // Invia la copia allo studio (online@studiorm.eu)
-  inviaEmailAlloStudio(payload);
+  const safe = (s) => (s || 'utente').replace(/[^a-zA-Z0-9]+/g, '_');
+  const filename = `Risposte_${safe(datiPersonali.cognome)}_${safe(datiPersonali.nome)}.json`;
 
+  // Invia le email (studio + persona), allegando il file
+  inviaEmail(payload, filename, datiPersonali.email);
+
+  // Genera comunque il download locale del file
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-
-  const safe = (s) => (s || 'utente').replace(/[^a-zA-Z0-9]+/g, '_');
-  const filename = `Risposte_${safe(datiPersonali.cognome)}_${safe(datiPersonali.nome)}.json`;
 
   const a = document.createElement('a');
   a.href = url;
