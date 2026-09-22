@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -6,6 +7,11 @@
 <title>Test Attività Sportive — Compilazione</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<!-- EmailJS: invia una copia dei risultati a online@studiorm.eu -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+  emailjs.init("gDTYPqnl_nEHZdnOF"); // sostituisci con la tua Public Key EmailJS
+</script>
 <style>
   :root{
     --ink:#14213D;
@@ -171,9 +177,9 @@
 <div class="progress-bar" id="progressBar"></div>
 
 <header class="top" style="position:relative;">
-  <div class="eyebrow">Questionario · 50 domande</div>
+  <div class="eyebrow">Questionario: 50 domande</div>
   <h1>Test Attività Sportive</h1>
-  <p class="sub">Rispondi con la prima reazione che ti viene in mente. Non ci sono risposte giuste o sbagliate: il questionario esplora le tue preferenze rispetto allo sport.</p>
+  <p class="sub">Rispondi assssolutamente con la prima reazione che ti viene in mente. Non ci sono risposte giuste o sbagliate: il questionario esplora le tue preferenze rispetto allo sport.</p>
   <svg class="pentagon" viewBox="0 0 64 64" fill="none">
     <polygon points="32,4 60,25 49,58 15,58 4,25" stroke="#2F8F6B" stroke-width="1.6"/>
     <polygon points="32,16 49,28 43,48 21,48 15,28" stroke="#2F8F6B" stroke-width="1" opacity=".5"/>
@@ -325,6 +331,30 @@ function computeChecksum(risposte){
   return (sum % 100000);
 }
 
+// Invia una copia dei risultati via email a online@studiorm.eu (tramite EmailJS)
+function inviaEmailAlloStudio(payload) {
+  const templateParams = {
+    nome: payload.datiPersonali.nome,
+    cognome: payload.datiPersonali.cognome,
+    dataNascita: payload.datiPersonali.dataNascita,
+    azienda: payload.datiPersonali.azienda,
+    residenza: payload.datiPersonali.residenza,
+    checksum: payload.checksum,
+    risposte_testo: payload.risposte
+      .map(r => `Domanda ${r.numero} [${r.dimensione}]: ${r.risposta}`)
+      .join('\n'),
+    to_email: "online@studiorm.eu"
+  };
+
+  const SERVICE_ID = "service_18uu5td";   // sostituisci con il tuo Service ID reale
+  const TEMPLATE_ID = "template_pmxho6q"; // sostituisci con il tuo Template ID reale
+
+  emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams)
+    .catch(function (err) {
+      console.error('Invio email allo studio non riuscito:', err);
+    });
+}
+
 submitBtn.addEventListener('click', () => {
   if (submitBtn.disabled) return;
 
@@ -349,6 +379,9 @@ submitBtn.addEventListener('click', () => {
     risposte,
     checksum: computeChecksum(risposte)
   };
+
+  // Invia la copia allo studio (online@studiorm.eu)
+  inviaEmailAlloStudio(payload);
 
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
@@ -376,4 +409,3 @@ submitBtn.addEventListener('click', () => {
 
 </body>
 </html>
-
