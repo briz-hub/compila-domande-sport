@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Attività Sportive — Calcolo Punteggi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14213D;
+    --ink-soft:#3C4A66;
+    --bg:#F5F6F2;
+    --paper:#FFFFFF;
+    --line:#E1E2DC;
+    --accent:#2F8F6B;
+    --accent-soft:#E7F2ED;
+    --warn:#C4572A;
+    --warn-soft:#FBEBE3;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;line-height:1.5;}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px 100px;}
+  header.top{padding:56px 24px 40px;max-width:760px;margin:0 auto;border-bottom:1px solid var(--line);position:relative;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;}
+  h1{font-family:'Fraunces',serif;font-weight:600;font-size:38px;margin:0 0 12px;letter-spacing:-.01em;}
+  .sub{color:var(--ink-soft);font-size:16px;max-width:56ch;}
+  .pentagon{position:absolute;right:40px;top:56px;width:64px;height:64px;}
+
+  section.card{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:32px;margin-top:28px;}
+
+  #dropZone{
+    border:1.5px dashed var(--line);
+    border-radius:4px;
+    padding:44px 24px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+  }
+  #dropZone.drag{border-color:var(--accent);background:var(--accent-soft);}
+  #dropZone .icon{
+    width:44px;height:44px;margin:0 auto 16px;
+    border:1.5px solid var(--ink-soft);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-soft);font-size:20px;
+  }
+  #dropZone p{margin:0 0 4px;font-weight:600;}
+  #dropZone .hint{color:var(--ink-soft);font-size:13px;}
+  #fileInput{display:none;}
+
+  .error{
+    display:flex;gap:10px;align-items:flex-start;
+    background:var(--warn-soft);border:1px solid #E9C3AE;color:var(--warn);
+    padding:14px 16px;border-radius:3px;font-size:14px;margin-top:20px;
+  }
+
+  .person-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 24px;margin-top:16px;}
+  .person-item .k{font-size:12px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+  .person-item .v{font-size:15px;font-weight:500;}
+
+  table.scores{width:100%;border-collapse:collapse;margin-top:8px;}
+  table.scores th{
+    text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--ink-soft);font-weight:600;padding:0 0 10px;border-bottom:1px solid var(--line);
+  }
+  table.scores td{padding:14px 0;border-bottom:1px solid var(--line);vertical-align:middle;}
+  table.scores tr:last-child td{border-bottom:none;}
+  .dim-name{font-weight:600;font-family:'Fraunces',serif;font-size:16px;}
+  .dim-code{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);}
+  .score-cell{display:flex;align-items:center;gap:12px;}
+  .score-num{font-family:'Fraunces',serif;font-weight:600;font-size:20px;min-width:34px;text-align:right;}
+  .bar-track{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--accent);border-radius:3px;}
+
+  .checksum-note{
+    margin-top:18px;font-size:12px;color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace;
+    display:flex;align-items:center;gap:6px;
+  }
+  .checksum-note.bad{color:var(--warn);}
+
+  .actions{display:flex;gap:12px;margin-top:24px;}
+  button{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:14px;
+    padding:10px 20px;border-radius:3px;cursor:pointer;
+  }
+  .btn-primary{background:var(--ink);color:#fff;border:none;}
+  .btn-primary:hover{background:var(--accent);}
+  .btn-secondary{background:#fff;color:var(--ink);border:1px solid var(--line);}
+  .btn-secondary:hover{border-color:var(--ink);}
+
+  @media print{
+    header.top, #dropZone, .actions, .pentagon{display:none !important;}
+    body{background:#fff;}
+  }
+  @media (max-width:600px){
+    .person-grid{grid-template-columns:1fr;}
+    h1{font-size:30px;}
+    .pentagon{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="eyebrow">Elaborazione risultati</div>
+  <h1>Calcolo Punteggi</h1>
+  <p class="sub">Carica il file generato dal questionario per ottenere il punteggio totale su ciascuna delle 5 dimensioni.</p>
+  <svg class="pentagon" viewBox="0 0 64 64" fill="none">
+    <polygon points="32,4 60,25 49,58 15,58 4,25" stroke="#2F8F6B" stroke-width="1.6"/>
+    <polygon points="32,16 49,28 43,48 21,48 15,28" stroke="#2F8F6B" stroke-width="1" opacity=".5"/>
+  </svg>
+</header>
+
+<div class="wrap">
+
+  <section class="card">
+    <div id="dropZone">
+      <div class="icon">↑</div>
+      <p>Trascina qui il file delle risposte</p>
+      <div class="hint">oppure clicca per selezionarlo — file .json generato da "Compila_Test.html"</div>
+    </div>
+    <input type="file" id="fileInput" accept=".json,application/json">
+    <div id="errorBox"></div>
+  </section>
+
+  <section class="card" id="resultCard" style="display:none;">
+    <div class="eyebrow">Dati anagrafici</div>
+    <div class="person-grid" id="personGrid"></div>
+  </section>
+
+  <section class="card" id="scoresCard" style="display:none;">
+    <div class="eyebrow">Punteggio totale per dimensione</div>
+    <table class="scores">
+      <thead><tr><th>Dimensione</th><th style="text-align:right;">Punteggio</th></tr></thead>
+      <tbody id="scoresBody"></tbody>
+    </table>
+    <div class="checksum-note" id="checksumNote"></div>
+    <div class="actions">
+      <button class="btn-primary" onclick="window.print()">Stampa / esporta PDF</button>
+      <button class="btn-secondary" id="resetBtn">Carica un altro file</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const DIMENSIONS = [
+  { code: "AF", label: "Affettività Negativa" },
+  { code: "DI", label: "Distacco" },
+  { code: "AN", label: "Antagonismo" },
+  { code: "DS", label: "Disinibizione" },
+  { code: "PS", label: "Psicotismo" }
+];
+// range massimo teorico per dimensione (10 domande, scala 1-5) — usato solo per la barra visiva
+const MAX_PER_DIM = 50;
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const errorBox = document.getElementById('errorBox');
+const resultCard = document.getElementById('resultCard');
+const scoresCard = document.getElementById('scoresCard');
+const personGrid = document.getElementById('personGrid');
+const scoresBody = document.getElementById('scoresBody');
+const checksumNote = document.getElementById('checksumNote');
+const resetBtn = document.getElementById('resetBtn');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+resetBtn.addEventListener('click', () => {
+  resultCard.style.display = 'none';
+  scoresCard.style.display = 'none';
+  errorBox.innerHTML = '';
+  fileInput.value = '';
+});
+
+function showError(msg){
+  errorBox.innerHTML = `<div class="error"><span>⚠</span><span>${msg}</span></div>`;
+  resultCard.style.display = 'none';
+  scoresCard.style.display = 'none';
+}
+
+function handleFile(file){
+  errorBox.innerHTML = '';
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let data;
+    try {
+      data = JSON.parse(e.target.result);
+    } catch (err) {
+      showError('Il file non è un JSON valido. Assicurati di caricare il file generato dal questionario, senza modificarlo.');
+      return;
+    }
+    processData(data);
+  };
+  reader.onerror = () => showError('Impossibile leggere il file selezionato.');
+  reader.readAsText(file);
+}
+
+function processData(data){
+  if (!data || data.tipo !== 'risposte_test_attivita_sportive' || !Array.isArray(data.risposte)) {
+    showError('Il file non ha il formato atteso (manca il tipo "risposte_test_attivita_sportive" o l\'elenco risposte).');
+    return;
+  }
+  if (data.risposte.length !== 50) {
+    showError(`Il file contiene ${data.risposte.length} risposte invece di 50. Il file potrebbe essere incompleto o corrotto.`);
+    return;
+  }
+
+  // ricalcola il checksum di base per rilevare modifiche manuali al file
+  let sum = 0;
+  data.risposte.forEach(r => { sum += (r.numero || 0) * (r.risposta || 0); });
+  const recomputed = sum % 100000;
+  const checksumOk = data.checksum === recomputed;
+
+  // somma i punteggi per dimensione (equivalente a SUMIF sul foglio "Foglio")
+  const totals = {};
+  DIMENSIONS.forEach(d => totals[d.code] = 0);
+  let invalidRow = false;
+  data.risposte.forEach(r => {
+    if (!(r.dimensione in totals)) { invalidRow = true; return; }
+    if (!(r.risposta >= 1 && r.risposta <= 5)) { invalidRow = true; }
+    totals[r.dimensione] += Number(r.risposta) || 0;
+  });
+
+  // dati anagrafici
+  const dp = data.datiPersonali || {};
+  personGrid.innerHTML = [
+    ['Nome', dp.nome], ['Cognome', dp.cognome],
+    ['Data di nascita', dp.dataNascita], ['Azienda', dp.azienda],
+    ['Residenza', dp.residenza]
+  ].map(([k,v]) => `
+    <div class="person-item"><div class="k">${k}</div><div class="v">${v || '—'}</div></div>
+  `).join('');
+
+  // tabella punteggi
+  scoresBody.innerHTML = DIMENSIONS.map(d => {
+    const val = totals[d.code];
+    const pct = Math.min(100, Math.round(val / MAX_PER_DIM * 100));
+    return `
+      <tr>
+        <td><div class="dim-name">${d.label}</div><div class="dim-code">${d.code}</div></td>
+        <td>
+          <div class="score-cell">
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%;"></div></div>
+            <div class="score-num">${val}</div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (checksumOk) {
+    checksumNote.className = 'checksum-note';
+    checksumNote.innerHTML = '✓ controllo di integrità superato — il file non risulta alterato';
+  } else {
+    checksumNote.className = 'checksum-note bad';
+    checksumNote.innerHTML = '⚠ il controllo di integrità non corrisponde: il file potrebbe essere stato modificato manualmente. Verifica i dati prima di usare questi punteggi.';
+  }
+  if (invalidRow) {
+    checksumNote.innerHTML += '<br>⚠ una o più risposte hanno un codice dimensione o un valore fuori dallo standard (1-5).';
+    checksumNote.className = 'checksum-note bad';
+  }
+
+  resultCard.style.display = 'block';
+  scoresCard.style.display = 'block';
+}
+</script>
+
+</body>
+</html>
